@@ -1,10 +1,11 @@
 <script>
-// import HeatMap from './components/HeatMap.vue';
+import Choropleth from './components/Choropleth.vue';
 import Footer from './components/Footer.vue';
 
 export default {
   name: 'App',
   components: {
+    Choropleth,
     Footer,
   },
 };
@@ -21,7 +22,7 @@ export default {
     >
       United States Educational Attainment
     </h1>
-    <HeatMap />
+    <Choropleth />
   </div>
 
   <footer>
