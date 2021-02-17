@@ -1,5 +1,5 @@
 <script>
-// import * as d3 from 'd3';
+import * as d3 from 'd3';
 // import * as topology from 'topojson';
 
 export default {
@@ -19,39 +19,43 @@ export default {
   },
 
   created() {
-    fetch(this.urlCounty)
-      .then((response) => response.json())
+    // fetch both sets of data simultaneously and combine into one data
+    Promise.all([
+      fetch(this.urlEdu),
+      fetch(this.urlCounty),
+    ])
+      .then((responses) => Promise.all(responses.map((response) => response.json())))
       .then((data) => {
         this.eduData = data;
-        // map data from edu into counties here?
       })
+      // call function that will draw the graph
       .then(() => this.graphInit())
       .catch((error) => console.log(error));
   },
 
   methods: {
     graphInit() {
-      console.log(this.eduData);
+      console.log(this.eduData[1]);
 
-      /*
-       *       const svg = d3.select('#choropleth')
-       *         .append('svg')
-       *         .attr('height', this.heightChart)
-       *         .attr('width', this.widthChart);
-       *
-       *       // d3 projection
-       *       const projection = d3.geo.albersUsa()
-       *         .translate([this.widthChart / 2], [this.heightChart / 2])
-       *         .scale([1000]);
-       *
-       *       const path = d3.geo.path()
-       *         .projection(projection);
-       *
-       *       svg.selectAll('path')
-       *         .append('path')
-       *         .style('stroke', '#fff')
-       *         .style('stroke-width', '1');
-       */
+      // placeholder for graph drawing
+
+      const svg = d3.select('#choropleth')
+        .append('svg')
+        .attr('height', this.heightChart)
+        .attr('width', this.widthChart);
+
+      // d3 projection
+      const projection = d3.geoAlbersUsa()
+        .translate([this.widthChart / 2], [this.heightChart / 2])
+        .scale([100]);
+
+      const path = d3.geoPath()
+        .projection(projection);
+
+      svg.selectAll(path)
+        .append(path)
+        .style('stroke', '#000')
+        .style('stroke-width', '1');
     },
   },
 };
