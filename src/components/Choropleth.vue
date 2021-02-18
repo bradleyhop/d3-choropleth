@@ -7,12 +7,17 @@ export default {
 
   data() {
     return {
+      // url returns json data with education level attainment by county
       urlEdu:
       'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json',
-      eduData: undefined, // placeholer for fetch'd eduacation data
+      // url returnds json needed to draw counties needed by topojson and d3
       urlCounty:
       'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json',
-      countyData: undefined, // placeholder for fetch'd county map data
+      // placeholer for fetch'd eduacation and count data stored in an array for each fetch'd json
+      fetchData: undefined,
+      // placeholder for a single array of objects combined by "fips" value given by the
+      //  education json and the "id" given by the county json
+      stitchData: undefined,
       heightChart: 1000, // height of d3 svg elemennt
       widthChart: 1000, // width of d3 svg elemennt
     };
@@ -26,7 +31,16 @@ export default {
     ])
       .then((responses) => Promise.all(responses.map((response) => response.json())))
       .then((data) => {
-        this.eduData = data;
+        this.fetchData = data;
+      })
+      .then(() => {
+        // merge the two data sets by county: "fips" and "id" are the same code!
+        const mergeById = (arr1, arr2) => arr1.map((firstKey) => (
+          {
+            ...arr2.find((secondKey) => (firstKey.fips === secondKey.id) && secondKey), ...firstKey,
+          }));
+        this.stitchData = mergeById(this.fetchData[0],
+          this.fetchData[1].objects.counties.geometries);
       })
       // call function that will draw the graph
       .then(() => this.graphInit())
@@ -35,7 +49,10 @@ export default {
 
   methods: {
     graphInit() {
-      console.log(this.eduData[1]);
+      // note the length of all arrays is equal!
+      console.log(this.fetchData[1].objects.counties.geometries);
+      console.log(this.fetchData[0]);
+      console.log(this.stitchData);
 
       // placeholder for graph drawing
 
