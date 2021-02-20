@@ -1,6 +1,6 @@
 <script>
 import * as d3 from 'd3';
-// import * as topology from 'topojson';
+import * as topojson from 'topojson';
 
 export default {
   name: 'Choropleth',
@@ -34,12 +34,13 @@ export default {
         this.fetchData = data;
       })
       .then(() => {
-        // merge the two data sets by county: "fips" and "id" are the same code!
-        const mergeById = (arr1, arr2) => arr1.map((firstKey) => (
-          {
-            ...arr2.find((secondKey) => (firstKey.fips === secondKey.id) && secondKey), ...firstKey,
-          }));
-        this.stitchData = mergeById(this.fetchData[0],
+        // merge the two data sets by county: "fips" and "id" refer to the same code!
+        const mergeByIdFips = (arr1, arr2) => arr1.map((firstObj) => ({
+          // using .find() because we are assuming that there are distinct "fips" and "id" values in
+          //  each array of the objects
+          ...arr2.find((secondObj) => (firstObj.fips === secondObj.id) && secondObj), ...firstObj,
+        }));
+        this.stitchData = mergeByIdFips(this.fetchData[0],
           this.fetchData[1].objects.counties.geometries);
       })
       // call function that will draw the graph
@@ -69,8 +70,11 @@ export default {
       const path = d3.geoPath()
         .projection(projection);
 
-      svg.selectAll(path)
-        .append(path)
+      svg.selectAll('path')
+        .data(topojson.feature(this.fetchData[1], this.fetchData[1].objects.counties).features)
+        .append('path')
+        .enter()
+        .attr('d', path)
         .style('stroke', '#000')
         .style('stroke-width', '1');
     },
