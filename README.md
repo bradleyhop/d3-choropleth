@@ -14,6 +14,8 @@ for project requirements.
 
 ## Integrated Testing Suite
 
-freeCodeCamp offers a script that will test each User Story point. To test,
-select the testing component, choose 'D3 Heat Map' from the drop-down menu, and
-hit 'Run Tests'. Select the 'Tests' button to see details of test.
+freeCodeCamp.org offers a script that will test each User Story point. To test,
+select the testing component (the green three-line-hamburger icon in the upper
+left corner), choose 'D3 Choropleth Map' from the drop-down menu, and hit 'Run
+Tests'. Select the 'Tests' button after the script is finished to see details of
+test.
