@@ -18,8 +18,8 @@ export default {
       // placeholder for a single array of objects combined by "fips" value given by the
       //  education json and the "id" given by the county json
       stitchData: undefined,
-      heightChart: 1000, // height of d3 svg elemennt
-      widthChart: 1000, // width of d3 svg elemennt
+      heightChart: 800, // height of d3 svg elemennt
+      widthChart: 1200, // width of d3 svg elemennt
     };
   },
 
@@ -34,6 +34,9 @@ export default {
         this.fetchData = data;
       })
       .then(() => {
+        // NOTE: I don't think this is the way to merge the data! Too much is lost (see state lines
+        // below).
+
         // merge the two data sets by county: "fips" and "id" refer to the same code!
         const mergeByIdFips = (arr1, arr2) => arr1.map((firstObj) => ({
           // using .find() because we are assuming that there are distinct "fips" and "id" values in
@@ -50,33 +53,34 @@ export default {
 
   methods: {
     graphInit() {
-      // note the length of all arrays is equal!
-      console.log(this.fetchData[1].objects.counties.geometries);
-      console.log(this.fetchData[0]);
-      console.log(this.stitchData);
+      // based on: https://observablehq.com/@d3/choropleth
 
-      // placeholder for graph drawing
+      console.log(this.fetchData[1].objects.counties);
+      console.log(this.stitchData);
 
       const svg = d3.select('#choropleth')
         .append('svg')
         .attr('height', this.heightChart)
         .attr('width', this.widthChart);
 
-      // d3 projection
-      const projection = d3.geoAlbersUsa()
-        .translate([this.widthChart / 2], [this.heightChart / 2])
-        .scale([100]);
+      const path = d3.geoPath();
 
-      const path = d3.geoPath()
-        .projection(projection);
-
-      svg.selectAll('path')
+      // COUNTY svg and education data
+      svg.append('g')
+        .selectAll('path')
         .data(topojson.feature(this.fetchData[1], this.fetchData[1].objects.counties).features)
-        .append('path')
         .enter()
-        .attr('d', path)
-        .style('stroke', '#000')
-        .style('stroke-width', '1');
+        .append('path')
+        .attr('d', path);
+
+      // STATE svg data
+      svg.append('path')
+        .datum(topojson.mesh(this.fetchData[1], this.fetchData[1].objects.states,
+          (a, b) => a !== b))
+        .attr('fill', 'none')
+        .attr('stroke', 'white')
+        .attr('stroke-linejoin', 'round')
+        .attr('d', path);
     },
   },
 };
