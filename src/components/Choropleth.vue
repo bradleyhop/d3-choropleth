@@ -20,6 +20,7 @@ export default {
       stitchData: undefined,
       heightChart: 800, // height of d3 svg elemennt
       widthChart: 1200, // width of d3 svg elemennt
+      mapPosition: '150, 30', // position of BOTH state and county maps within the svg
     };
   },
 
@@ -33,19 +34,6 @@ export default {
       .then((data) => {
         this.fetchData = data;
       })
-      .then(() => {
-        // NOTE: I don't think this is the way to merge the data! Too much is lost (see state lines
-        // below).
-
-        // merge the two data sets by county: "fips" and "id" refer to the same code!
-        const mergeByIdFips = (arr1, arr2) => arr1.map((firstObj) => ({
-          // using .find() because we are assuming that there are distinct "fips" and "id" values in
-          //  each array of the objects
-          ...arr2.find((secondObj) => (firstObj.fips === secondObj.id) && secondObj), ...firstObj,
-        }));
-        this.stitchData = mergeByIdFips(this.fetchData[0],
-          this.fetchData[1].objects.counties.geometries);
-      })
       // call function that will draw the graph
       .then(() => this.graphInit())
       .catch((error) => console.log(error));
@@ -55,15 +43,22 @@ export default {
     graphInit() {
       // based on: https://observablehq.com/@d3/choropleth
 
-      console.log(this.fetchData[1].objects.counties);
-      console.log(this.stitchData);
+      console.log(this.fetchData[1]);
 
       const svg = d3.select('#choropleth')
         .append('svg')
         .attr('height', this.heightChart)
         .attr('width', this.widthChart);
 
-      const path = d3.geoPath();
+      // creates a linear color scale for us! thanks d3!
+      const colorScale = d3.scaleLinear()
+        .domain([
+          d3.min(this.fetchData[0], (d) => d.bachelorsOrHigher),
+          d3.max(this.fetchData[0], (d) => d.bachelorsOrHigher),
+        ])
+        .range(['#ffffff', '#004D40']);
+
+      const path = d3.geoPath(); // provides backbone for svg data
 
       // COUNTY svg and education data
       svg.append('g')
@@ -71,7 +66,27 @@ export default {
         .data(topojson.feature(this.fetchData[1], this.fetchData[1].objects.counties).features)
         .enter()
         .append('path')
-        .attr('d', path);
+        .attr('d', path)
+        .attr('class', 'county') // project requirement
+        .attr('data-fips', (d) => d.id) // project requirement
+        .attr('data-education', (d) => {
+          // using find to return first result; assuming id and fips are unique!
+          const result = this.fetchData[0].find((obj) => obj.fips === d.id);
+          if (result) {
+            return result.bachelorsOrHigher;
+          }
+          return 0;
+        })
+        // this is redudant, btw; can we combine the objects together?
+        .attr('fill', (d) => {
+          // using find to return first result; assuming id and fips are unique!
+          const result = this.fetchData[0].find((obj) => obj.fips === d.id);
+          if (result) {
+            return colorScale(result.bachelorsOrHigher);
+          }
+          return '#000000'; // no match found
+        })
+        .attr('transform', `translate(${this.mapPosition})`);
 
       // STATE svg data
       svg.append('path')
@@ -80,7 +95,21 @@ export default {
         .attr('fill', 'none')
         .attr('stroke', 'white')
         .attr('stroke-linejoin', 'round')
-        .attr('d', path);
+        .attr('d', path)
+        .attr('transform', `translate(${this.mapPosition})`);
+    },
+
+    // Takes in the minimum and maximum of a range of numbers; count is the number of steps between
+    //  each value; returns an array with length of count starting with the min and ending with the
+    //  max.
+    stepScaleArr(min, max, count) {
+      const arr = [];
+      const step = (max - min) / count;
+      const base = min;
+      for (let i = 1; i < count + 1; i += 1) {
+        arr.push(d3.format('0.2f')(base + i * step));
+      }
+      return arr;
     },
   },
 };
