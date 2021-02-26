@@ -14,13 +14,14 @@ export default {
       urlCounty:
       'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json',
       // placeholer for fetch'd eduacation and count data stored in an array for each fetch'd json
-      fetchData: undefined,
-      // placeholder for a single array of objects combined by "fips" value given by the
       //  education json and the "id" given by the county json
+      fetchData: undefined,
       stitchData: undefined,
+      eduData: undefined, // placeholer for education attainment by county data
+      countyData: undefined, // TopoJSON data for drawing counties, states
       heightChart: 800, // height of d3 svg elemennt
       widthChart: 1200, // width of d3 svg elemennt
-      mapPosition: '150, 30', // position of BOTH state and county maps within the svg
+      mapPosition: '150, 40', // position of BOTH state and county maps within the svg
     };
   },
 
@@ -32,7 +33,33 @@ export default {
     ])
       .then((responses) => Promise.all(responses.map((response) => response.json())))
       .then((data) => {
+        this.eduData = data[0];
+        this.countyData = data[1];
         this.fetchData = data;
+      })
+      .then(() => {
+        // NOTE: This is slow?! At least the browser isn't complaining about a bad script...
+        // merge the two data sets by county: "fips" and "id" refer to the same code!
+        const mergeByIdFips = (arr1, arr2) => arr1.map((firstObj) => ({
+          // using .find() because we are assuming that there are distinct "fips" and "id" values in
+          //  each array of the objects
+          ...arr2.find((secondObj) => (firstObj.fips === secondObj.id) && secondObj), ...firstObj,
+        }));
+        this.stitchData = mergeByIdFips(this.eduData,
+          this.countyData.objects.counties.geometries);
+      })
+      // This inserts the education data into county svg data so that we need only reference one
+      // object instead of constantly searching between the two.
+      .then(() => {
+        this.countyData.objects.counties.geometries = this.stitchData.map((d) => ({
+          ...d,
+          properties: {
+            fips: d.fips,
+            area_name: d.area_name,
+            state: d.state,
+            bachelorsOrHigher: d.bachelorsOrHigher,
+          },
+        }));
       })
       // call function that will draw the graph
       .then(() => this.graphInit())
@@ -43,7 +70,9 @@ export default {
     graphInit() {
       // based on: https://observablehq.com/@d3/choropleth
 
-      console.log(this.fetchData[1]);
+      console.log(this.eduData);
+      console.log(this.countyData);
+      console.log(this.stitchData);
 
       const svg = d3.select('#choropleth')
         .append('svg')
@@ -53,8 +82,8 @@ export default {
       // creates a linear color scale for us! thanks d3!
       const colorScale = d3.scaleLinear()
         .domain([
-          d3.min(this.fetchData[0], (d) => d.bachelorsOrHigher),
-          d3.max(this.fetchData[0], (d) => d.bachelorsOrHigher),
+          d3.min(this.eduData, (d) => d.bachelorsOrHigher),
+          d3.max(this.eduData, (d) => d.bachelorsOrHigher),
         ])
         .range(['#ffffff', '#004D40']);
 
@@ -63,37 +92,24 @@ export default {
       // COUNTY svg and education data
       svg.append('g')
         .selectAll('path')
-        .data(topojson.feature(this.fetchData[1], this.fetchData[1].objects.counties).features)
+        // converts the TopoJSON data that we get into GeoJSON that D3's .geoPath() can use
+        .data(topojson.feature(this.countyData, this.countyData.objects.counties).features)
         .enter()
         .append('path')
         .attr('d', path)
         .attr('class', 'county') // project requirement
         .attr('data-fips', (d) => d.id) // project requirement
-        .attr('data-education', (d) => {
-          // using find to return first result; assuming id and fips are unique!
-          const result = this.fetchData[0].find((obj) => obj.fips === d.id);
-          if (result) {
-            return result.bachelorsOrHigher;
-          }
-          return 0;
-        })
-        // this is redudant, btw; can we combine the objects together?
-        .attr('fill', (d) => {
-          // using find to return first result; assuming id and fips are unique!
-          const result = this.fetchData[0].find((obj) => obj.fips === d.id);
-          if (result) {
-            return colorScale(result.bachelorsOrHigher);
-          }
-          return '#000000'; // no match found
-        })
+        .attr('data-education', (d) => d.properties.bachelorsOrHigher) // project requirement
+        .attr('fill', (d) => colorScale(d.properties.bachelorsOrHigher))
+        // .attr('data', (d) => JSON.stringify(d)) // what are we working with?!
         .attr('transform', `translate(${this.mapPosition})`);
 
-      // STATE svg data
+      // STATE svg data; drawn on top of county data
       svg.append('path')
-        .datum(topojson.mesh(this.fetchData[1], this.fetchData[1].objects.states,
+        .datum(topojson.mesh(this.countyData, this.countyData.objects.states,
           (a, b) => a !== b))
         .attr('fill', 'none')
-        .attr('stroke', 'white')
+        .attr('stroke', '#ffffff')
         .attr('stroke-linejoin', 'round')
         .attr('d', path)
         .attr('transform', `translate(${this.mapPosition})`);
