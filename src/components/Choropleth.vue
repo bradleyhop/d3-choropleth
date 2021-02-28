@@ -19,7 +19,7 @@ export default {
       stitchData: undefined,
       eduData: undefined, // placeholer for education attainment by county data
       countyData: undefined, // TopoJSON data for drawing counties, states
-      heightChart: 800, // height of d3 svg elemennt
+      heightChart: 650, // height of d3 svg elemennt
       widthChart: 1200, // width of d3 svg elemennt
       mapPosition: '150, 40', // position of BOTH state and county maps within the svg
     };
@@ -87,45 +87,62 @@ export default {
         ])
         .range(['#ffffff', '#004D40']);
 
+      // svg group for the mapping of data; helps keep data graphics separate from axis
+      const map = svg.append('g')
+        .attr('id', 'map')
+        .attr('class', 'map');
+
+      // function declaration for tooltip div element
+      const divTool = d3.select('#choropleth')
+        .append('g')
+        .attr('id', 'tooltip') // project requirement
+        .attr('class', 'tooltip')
+        .style('opacity', 0);
+
       const path = d3.geoPath(); // provides backbone for svg data
 
       // COUNTY svg and education data
-      svg.append('g')
-        .selectAll('path')
+      map.selectAll('path')
         // converts the TopoJSON data that we get into GeoJSON that D3's .geoPath() can use
         .data(topojson.feature(this.countyData, this.countyData.objects.counties).features)
         .enter()
         .append('path')
         .attr('d', path)
+        // .attr('data', (d) => JSON.stringify(d)) // what are we working with?!
         .attr('class', 'county') // project requirement
         .attr('data-fips', (d) => d.id) // project requirement
         .attr('data-education', (d) => d.properties.bachelorsOrHigher) // project requirement
         .attr('fill', (d) => colorScale(d.properties.bachelorsOrHigher))
-        // .attr('data', (d) => JSON.stringify(d)) // what are we working with?!
+        // hover over county to show tooltip info
+        .on('mouseover', (event, d) => {
+          divTool
+            .style('opacity', 1)
+            .style('display', 'flex')
+            .attr('data-education', d.properties.bachelorsOrHigher) // project requirement
+            .html(`<p>
+              <span class="toolHeading">${d.properties.area_name}, ${d.properties.state}:
+              ${d.properties.bachelorsOrHigher}&#37;</span>
+            </p>`)
+            // offsets for tooltip box
+            .style('top', `${event.pageY - 45}px`)
+            .style('left', `${event.pageX - 30}px`);
+        })
+        .on('mouseout', () => {
+          divTool
+            .style('opacity', 0)
+            .style('display', 'none');
+        })
         .attr('transform', `translate(${this.mapPosition})`);
 
       // STATE svg data; drawn on top of county data
       svg.append('path')
         .datum(topojson.mesh(this.countyData, this.countyData.objects.states,
           (a, b) => a !== b))
+        .attr('class', 'state') // color fill and outline change in css on hover
         .attr('fill', 'none')
-        .attr('stroke', '#ffffff')
         .attr('stroke-linejoin', 'round')
         .attr('d', path)
         .attr('transform', `translate(${this.mapPosition})`);
-    },
-
-    // Takes in the minimum and maximum of a range of numbers; count is the number of steps between
-    //  each value; returns an array with length of count starting with the min and ending with the
-    //  max.
-    stepScaleArr(min, max, count) {
-      const arr = [];
-      const step = (max - min) / count;
-      const base = min;
-      for (let i = 1; i < count + 1; i += 1) {
-        arr.push(d3.format('0.2f')(base + i * step));
-      }
-      return arr;
     },
   },
 };
@@ -152,5 +169,35 @@ export default {
   color: $text-gray;
   font-family: Roboto, Helvetica, Arial, sans-serif;
   margin-bottom: 0;
+}
+
+.map {
+  width: 50%;
+}
+
+.county:hover {
+  fill: #fff;
+  // stroke: #000;
+}
+
+.state {
+  stroke: $app-background;
+}
+
+.tooltip {
+  align-items: center;
+  background: $mouseover;
+  border-radius: 5px;
+  border-style: none;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  color: $mouseover-text;
+  font-family: Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  padding: 0.5rem 0.6rem;
+  position: absolute;
+
+  & .toolHeading {
+    font-weight: bold;
+  }
 }
 </style>
