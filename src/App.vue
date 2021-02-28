@@ -45,7 +45,7 @@ export default {
 }
 
 body {
-  background-color: #fafafa;
+  background-color: $app-background;
 }
 
 #app {
