@@ -11,5 +11,5 @@ module.exports = {
       },
     },
   },
-  publicPath: process.env.NODE_ENV === 'production' ? '/d3-heatmap-build/' : '/',
+  publicPath: process.env.NODE_ENV === 'production' ? '/d3-choropleth-build/' : '/',
 };
