@@ -49,7 +49,7 @@ body {
 }
 
 #app {
-  color: $text-gray;
+  color: $text-default;
   display: flex; // boilerplate to keep footer down below
   flex-direction: column; // footer at the bottom ;)
   font-family: "Open Sans", Helvetica, Arial, sans-serif;
