@@ -10,20 +10,20 @@ export default {
       // url returns json data with education level attainment by county
       urlEdu:
       'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json',
-      // url returnds json needed to draw counties needed by topojson and d3
+      // url returns json needed to draw counties needed by topojson and d3
       urlCounty:
       'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json',
-      // placeholer for fetch'd eduacation and count data stored in an array for each fetch'd json
+      // placeholder for fetch'd education and count data stored in an array for each fetch'd json
       //  education json and the "id" given by the county json
       fetchData: undefined,
       stitchData: undefined,
-      eduData: undefined, // placeholer for education attainment by county data
+      eduData: undefined, // placeholder for education attainment by county data
       countyData: undefined, // TopoJSON data for drawing counties, states
-      heightChart: '650', // height of d3 svg elemennt
-      widthChart: '1200', // width of d3 svg elemennt
-      mapPosition: '150, 40', // position of BOTH state and county maps within the svg
-      legendWidth: 180,
-      legendPostion: '800, 80',
+      heightChart: '650', // height of d3 svg #choropleth element
+      widthChart: '1200', // width of d3 svg #choropleth element
+      mapPosition: '125, 0', // position of BOTH state and county maps within the svg
+      legendWidth: 280,
+      legendPostion: '700, 25',
       // 7 count divergent color swatch for temp colors:
       // Sequential color scheme started as YlGnBl from https://observablehq.com/@d3/color-schemes
       // Colors converted to nearest material design palate using https://materialmixer.co/
@@ -83,22 +83,18 @@ export default {
       const lowestLevelEdu = d3.min(this.eduData, (d) => d.bachelorsOrHigher);
       const highestLevelEdu = d3.max(this.eduData, (d) => d.bachelorsOrHigher);
 
-      console.log(`Min: ${lowestLevelEdu}, Max: ${highestLevelEdu}`);
-
       const svg = d3.select('#choropleth')
         .append('svg')
         .attr('height', this.heightChart)
         .attr('width', this.widthChart);
 
-      // creates a linear color scale for us! thanks d3!
-      const colorScale = d3.scaleQuantize()
-        .domain([
+      const colorScale = d3.scaleThreshold()
+        .domain(this.stepScaleArr(
           lowestLevelEdu,
           highestLevelEdu,
-        ])
+          this.colorBand.length,
+        ))
         .range(this.colorBand);
-
-      console.log(colorScale(22.5));
 
       // svg group for the mapping of data; helps keep data graphics separate from axis
       const map = svg.append('g')
@@ -106,11 +102,10 @@ export default {
         .attr('class', 'map');
 
       // function declaration for tooltip div element
-      const divTool = d3.select('#choropleth')
+      const divTool = d3.select('#tooltip-container')
         .append('g')
-        .attr('id', 'tooltip') // project requirement
-        .attr('class', 'tooltip')
-        .style('opacity', 0);
+        .attr('id', 'tooltip') // must be here to satisfy project requirement
+        .style('visibility', 'hidden');
 
       // COUNTY svg and education data
       map.selectAll('path')
@@ -137,21 +132,17 @@ export default {
         // hover over county to show tooltip info
         .on('mouseover', (event, d) => {
           divTool
-            .style('opacity', 1)
-            .style('display', 'flex')
+            .style('visibility', 'visible')
+            // .style('display', 'flex')
             .attr('data-education', d.properties.bachelorsOrHigher) // project requirement
             .html(`<p>
               <span>${d.properties.area_name}, ${d.properties.state}:
               ${d.properties.bachelorsOrHigher}&#37;</span>
-            </p>`)
-            // offsets for tooltip box
-            .style('top', '15%')
-            .style('left', '40%');
+            </p>`);
         })
         .on('mouseout', () => {
           divTool
-            .style('opacity', 0)
-            .style('display', 'none');
+            .style('visibility', 'hidden');
         })
         .attr('transform', `translate(${this.mapPosition})`);
 
@@ -180,7 +171,10 @@ export default {
         ]);
 
       const legendAxis = d3.axisBottom(legendScale)
-        .tickSize(30);
+        // add lowestLevelEdu to label range b/c not in domain
+        .tickValues([lowestLevelEdu].concat(colorScale.domain()))
+        .tickFormat((d) => `${d}%`)
+        .tickSize(20);
 
       legend
         .attr('transform', `translate(${this.legendPostion})`)
@@ -202,10 +196,24 @@ export default {
         .attr('class', 'legend-cell')
         .attr('x', (d) => legendScale(d[0]))
         .attr('width', (d) => legendScale(d[1]) - legendScale(d[0]))
-        .attr('height', 20)
+        .attr('height', 15)
         // deviating from example because this works
         .attr('fill', (d, i) => this.colorBand[i]);
     },
+
+    // Takes in the minimum and maximum of a range of numbers; count is the number of steps between
+    //  each value; returns an array with length of count starting with the min and ending with the
+    //  max.
+    stepScaleArr(min, max, count) {
+      const arr = [];
+      const step = (max - min) / count;
+      const base = min;
+      for (let i = 1; i < count + 1; i += 1) {
+        arr.push(d3.format('0.1f')(base + i * step));
+      }
+      return arr;
+    },
+
   },
 };
 </script>
@@ -215,8 +223,15 @@ export default {
     <h2
       class="chart-title"
       id="description">
-      Percentage of Adults Age 25 and Older With a Bachelor's Degree or Higher (2010-2014)
+      Percentage of Adults Age 25 and Older With a Bachelor's Degree or Higher
+      (2010-2014)<sup>*</sup>
     </h2>
+    <!-- tooltip info displays on mouseover here; id is project requirement -->
+    <div
+      id="tooltip-container"
+      class="tooltip-container"
+    >
+    </div>
     <!-- d3 choropleth map is drawn at #choropleth -->
     <div
       class="choropleth"
@@ -228,13 +243,9 @@ export default {
 
 <style lang="scss">
 .chart-title {
-  color: $text-gray;
+  color: $text-default;
   font-family: Roboto, Helvetica, Arial, sans-serif;
   margin-bottom: 0;
-}
-
-.choropleth {
-  overflow: hidden;
 }
 
 .county:hover {
@@ -246,10 +257,11 @@ export default {
   stroke: $app-background;
 }
 
-.tooltip {
-  align-items: center;
+.tooltip-container {
   font-family: Roboto, Helvetica, Arial, sans-serif;
   font-size: 24px;
-  position: absolute;
+  font-weight: bold;
+  height: 1.75rem;
+  margin-top: 1.5rem;
 }
 </style>

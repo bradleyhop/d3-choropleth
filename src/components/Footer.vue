@@ -20,6 +20,16 @@ export default {
 <template>
   <div class="footer-content">
     <div class="footer-copy">
+      <p><sup>*</sup>Source:
+      <a
+        class="footer-link"
+        href="https://www.ers.usda.gov/data-products/county-level-data-sets/download-data.aspx"
+        rel="noopener noreferer"
+        target="_blank"
+      >
+      USDA Economic Research Service
+      </a>
+      </p>
       <a
         class="footer-link"
         href="https://github.com/bradleyhop/"
@@ -45,22 +55,21 @@ export default {
 
 <style scoped lang="scss">
 .footer-content {
-  color: $text-gray;
-  height: 2.5rem;
+  color: $text-default;
+  // height: 2.5rem;
   margin: 0;
   padding: 0.5rem;
-  text-align: left;
 }
 
 .footer-copy {
   float: right;
-  line-height: 1.2rem;
+  line-height: 1.5rem;
   margin-bottom: 1rem;
   margin-right: 1rem;
 }
 
 .footer-link {
-  color: $text-gray;
+  color: $text-default;
   text-decoration: none;
 }
 
@@ -69,6 +78,6 @@ export default {
 }
 
 .footer-link:active {
-  color: $text-gray;
+  color: $text-default;
 }
 </style>
