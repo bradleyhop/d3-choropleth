@@ -15,8 +15,7 @@ export default {
       'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json',
       // placeholder for fetch'd education and count data stored in an array for each fetch'd json
       //  education json and the "id" given by the county json
-      fetchData: undefined,
-      stitchData: undefined,
+      stitchData: undefined, // placeholder for merged education and county data
       eduData: undefined, // placeholder for education attainment by county data
       countyData: undefined, // TopoJSON data for drawing counties, states
       heightChart: '650', // height of d3 svg #choropleth element
@@ -37,27 +36,29 @@ export default {
       fetch(this.urlEdu),
       fetch(this.urlCounty),
     ])
+      // the fetch'd data is combined into an array with data[0] representing the education data
+      //  and data[1] representing the path data for the counties and state
       .then((responses) => Promise.all(responses.map((response) => response.json())))
       .then((data) => {
         this.eduData = data[0];
-        this.countyData = data[1];
-        this.fetchData = data;
+        this.mapData = data[1];
       })
       .then(() => {
-        // NOTE: This is slow?! At least the browser isn't complaining about a bad script...
-        // merge the two data sets by county: "fips" and "id" refer to the same code!
+        // NOTE: This is slow?! At least the browser isn't complaining about a bad script anymore...
+        // merge the two data sets by county: "fips" in education data and "id" in the counties
+        //  data refer to the same code!
         const mergeByIdFips = (arr1, arr2) => arr1.map((firstObj) => ({
           // using .find() because we are assuming that there are distinct "fips" and "id" values in
           //  each array of the objects
-          ...arr2.find((secondObj) => (firstObj.fips === secondObj.id) && secondObj), ...firstObj,
+          ...arr2.find((secondObj) => (firstObj.fips === secondObj.id)), ...firstObj,
         }));
         this.stitchData = mergeByIdFips(this.eduData,
-          this.countyData.objects.counties.geometries);
+          this.mapData.objects.counties.geometries);
       })
       // This inserts the education data into county svg data so that we need only reference one
-      // object instead of constantly searching between the two.
+      // object instead of constantly searching between the two when renedering the map.
       .then(() => {
-        this.countyData.objects.counties.geometries = this.stitchData.map((d) => ({
+        this.mapData.objects.counties.geometries = this.stitchData.map((d) => ({
           ...d,
           properties: {
             fips: d.fips,
@@ -75,10 +76,6 @@ export default {
   methods: {
     graphInit() {
       // based on: https://observablehq.com/@d3/choropleth
-
-      console.log(this.eduData);
-      console.log(this.countyData);
-      console.log(this.stitchData);
 
       const lowestLevelEdu = d3.min(this.eduData, (d) => d.bachelorsOrHigher);
       const highestLevelEdu = d3.max(this.eduData, (d) => d.bachelorsOrHigher);
@@ -110,34 +107,30 @@ export default {
       // COUNTY svg and education data
       map.selectAll('path')
         // converts the TopoJSON data that we get into GeoJSON that D3's .geoPath() can use
-        .data(topojson.feature(this.countyData, this.countyData.objects.counties).features)
+        .data(topojson.feature(this.mapData, this.mapData.objects.counties).features)
         .enter()
         .append('path')
         .attr('d', d3.geoPath()) // provides backbone for svg data
         // .attr('data', (d) => JSON.stringify(d)) // what are we working with?!
         .attr('class', 'county') // project requirement
-        .attr('data-fips', (d) => d.id) // project requirement
-        .attr('data-education', (d) => {
-          if (d.properties.bachelorsOrHigher) {
-            return d.properties.bachelorsOrHigher;
-          }
-          return 'Edcuation Data Not Available';
-        }) // project requirement
-        .attr('fill', (d) => {
-          if (d.properties.bachelorsOrHigher) {
-            return colorScale(d.properties.bachelorsOrHigher);
-          }
-          return '#000';
-        })
+        .attr('data-fips', (d) => (d.id ? d.id : 0)) // project requirement
+        .attr('data-education', (d) => (d.properties.bachelorsOrHigher ? d.properties.bachelorsOrHigher
+          : 0)) // project requirement
+        .attr('fill', (d) => (d.properties.bachelorsOrHigher
+          ? colorScale(d.properties.bachelorsOrHigher) : '#000'))
         // hover over county to show tooltip info
         .on('mouseover', (event, d) => {
           divTool
             .style('visibility', 'visible')
-            // .style('display', 'flex')
-            .attr('data-education', d.properties.bachelorsOrHigher) // project requirement
+            .attr('data-education', (d.properties.bachelorsOrHigher ? d.properties.bachelorsOrHigher
+              : 0)) // project requirement
             .html(`<p>
-              <span>${d.properties.area_name}, ${d.properties.state}:
-              ${d.properties.bachelorsOrHigher}&#37;</span>
+              <span>
+              ${d.properties.area_name ? d.properties.area_name : 'County Unknown'},
+              ${d.properties.state ? d.properties.state : 'State Unkown'}:
+              ${d.properties.bachelorsOrHigher
+    ? d.properties.bachelorsOrHigher : 'Edcuation Data Not Available'}&#37;
+              </span>
             </p>`);
         })
         .on('mouseout', () => {
@@ -148,7 +141,7 @@ export default {
 
       // STATE svg data; drawn on top of county data
       svg.append('path')
-        .datum(topojson.mesh(this.countyData, this.countyData.objects.states,
+        .datum(topojson.mesh(this.mapData, this.mapData.objects.states,
           (a, b) => a !== b))
         .attr('d', d3.geoPath())
         .attr('class', 'state') // color fill and outline change in css on hover
@@ -222,7 +215,8 @@ export default {
   <div class="conainter-choropleth">
     <h2
       class="chart-title"
-      id="description">
+      id="description"
+      >
       Percentage of Adults Age 25 and Older With a Bachelor's Degree or Higher
       (2010-2014)<sup>*</sup>
     </h2>
@@ -230,13 +224,20 @@ export default {
     <div
       id="tooltip-container"
       class="tooltip-container"
-    >
+      >
+      <!-- show message to user that data is processing; once data is merged,
+        drawing the map is quick -->
+      <p
+        class="loading-message"
+        v-if="!this.stitchData">
+      Loading...
+      </p>
     </div>
     <!-- d3 choropleth map is drawn at #choropleth -->
     <div
       class="choropleth"
       id="choropleth"
-    >
+      >
     </div>
   </div>
 </template>

@@ -56,7 +56,6 @@ export default {
 <style scoped lang="scss">
 .footer-content {
   color: $text-default;
-  // height: 2.5rem;
   margin: 0;
   padding: 0.5rem;
 }
