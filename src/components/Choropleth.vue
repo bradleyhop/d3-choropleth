@@ -20,9 +20,9 @@ export default {
       countyData: undefined, // TopoJSON data for drawing counties, states
       heightChart: '650', // height of d3 svg #choropleth element
       widthChart: '1200', // width of d3 svg #choropleth element
-      mapPosition: '125, 0', // position of BOTH state and county maps within the svg
-      legendWidth: 280,
-      legendPostion: '700, 25',
+      mapViewBox: '0 0 975 610', // position of BOTH state and county maps within the svg
+      legendWidth: 250,
+      legendPostion: '600, 35',
       // 7 count divergent color swatch for temp colors:
       // Sequential color scheme started as YlGnBl from https://observablehq.com/@d3/color-schemes
       // Colors converted to nearest material design palate using https://materialmixer.co/
@@ -82,6 +82,7 @@ export default {
 
       const svg = d3.select('#choropleth')
         .append('svg')
+        .attr('viewBox', this.mapViewBox)
         .attr('height', this.heightChart)
         .attr('width', this.widthChart);
 
@@ -119,6 +120,8 @@ export default {
         .attr('fill', (d) => (d.properties.bachelorsOrHigher
           ? colorScale(d.properties.bachelorsOrHigher) : '#000'))
         // hover over county to show tooltip info
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
         .on('mouseover', (event, d) => {
           divTool
             .style('visibility', 'visible')
@@ -136,18 +139,17 @@ export default {
         .on('mouseout', () => {
           divTool
             .style('visibility', 'hidden');
-        })
-        .attr('transform', `translate(${this.mapPosition})`);
+        });
 
       // STATE svg data; drawn on top of county data
       svg.append('path')
         .datum(topojson.mesh(this.mapData, this.mapData.objects.states,
           (a, b) => a !== b))
         .attr('d', d3.geoPath())
-        .attr('class', 'state') // color fill and outline change in css on hover
+        .attr('class', 'state') // color fill and outline change in css on hover in css
         .attr('fill', 'none')
         .attr('stroke-linejoin', 'round')
-        .attr('transform', `translate(${this.mapPosition})`);
+        .attr('stroke-linecap', 'round');
 
       // LEGEND
       const legend = svg.append('g')
@@ -166,7 +168,7 @@ export default {
       const legendAxis = d3.axisBottom(legendScale)
         // add lowestLevelEdu to label range b/c not in domain
         .tickValues([lowestLevelEdu].concat(colorScale.domain()))
-        .tickFormat((d) => `${d}%`)
+        .tickFormat((d) => `${d3.format('d')(d)}%`) // format to decimal, rounded to int
         .tickSize(20);
 
       legend
@@ -189,7 +191,7 @@ export default {
         .attr('class', 'legend-cell')
         .attr('x', (d) => legendScale(d[0]))
         .attr('width', (d) => legendScale(d[1]) - legendScale(d[0]))
-        .attr('height', 15)
+        .attr('height', 12)
         // deviating from example because this works
         .attr('fill', (d, i) => this.colorBand[i]);
     },
