@@ -8,15 +8,6 @@ export default {
   data() {
     return {
       loading: true, // conditional redning variable to show basic loading status to user
-      heightChart: '650', // height of d3 svg #choropleth element
-      widthChart: '1200', // width of d3 svg #choropleth element
-      mapViewBox: '0 0 975 610', // position of BOTH state and county maps within the svg
-      legendWidth: 250,
-      legendPostion: '600, 35',
-      // 7 count divergent color swatch for temp colors:
-      // Sequential color scheme started as YlGnBl from https://observablehq.com/@d3/color-schemes
-      // Colors converted to nearest material design palate using https://materialmixer.co/
-      colorBand: ['#fff9c4', '#c5e1a5', '#80cbc4', '#4db6ac', '#1976d2', '#1565c0', '#1a237e'],
     };
   },
 
@@ -69,6 +60,16 @@ export default {
     graphInit() {
       // based on: https://observablehq.com/@d3/choropleth
 
+      const heightChart = '650'; // height of d3 svg #choropleth element
+      const widthChart = '1200'; // width of d3 svg #choropleth element
+      const mapViewBox = '0 0 975 610'; // position of BOTH state and county maps within the svg
+      const legendWidth = 250;
+      const legendPostion = '600, 35';
+      // 7 count divergent color swatch for temp colors:
+      // Sequential color scheme started as YlGnBl from https://observablehq.com/@d3/color-schemes
+      // Colors converted to nearest material design palate using https://materialmixer.co/
+      const colorBand = ['#fff9c4', '#c5e1a5', '#80cbc4', '#4db6ac', '#1976d2', '#1565c0', '#1a237e'];
+
       // remove loading message
       this.loading = false;
 
@@ -77,17 +78,17 @@ export default {
 
       const svg = d3.select('#choropleth')
         .append('svg')
-        .attr('viewBox', this.mapViewBox)
-        .attr('height', this.heightChart)
-        .attr('width', this.widthChart);
+        .attr('viewBox', mapViewBox)
+        .attr('height', heightChart)
+        .attr('width', widthChart);
 
       const colorScale = d3.scaleThreshold()
         .domain(this.stepScaleArr(
           lowestLevelEdu,
           highestLevelEdu,
-          this.colorBand.length,
+          colorBand.length,
         ))
-        .range(this.colorBand);
+        .range(colorBand);
 
       // svg group for the mapping of data; helps keep data graphics separate from axis
       const map = svg.append('g')
@@ -157,7 +158,7 @@ export default {
         ])
         .range([
           0,
-          this.legendWidth,
+          legendWidth,
         ]);
 
       const legendAxis = d3.axisBottom(legendScale)
@@ -167,7 +168,7 @@ export default {
         .tickSize(20);
 
       legend
-        .attr('transform', `translate(${this.legendPostion})`)
+        .attr('transform', `translate(${legendPostion})`)
         .call(legendAxis);
 
       legend.selectAll('rect')
@@ -188,7 +189,7 @@ export default {
         .attr('width', (d) => legendScale(d[1]) - legendScale(d[0]))
         .attr('height', 12)
         // deviating from example because this works
-        .attr('fill', (d, i) => this.colorBand[i]);
+        .attr('fill', (d, i) => colorBand[i]);
     },
 
     // Takes in the minimum and maximum of a range of numbers; count is the number of steps between
