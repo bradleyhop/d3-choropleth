@@ -8,6 +8,21 @@ export default {
   data() {
     return {
       loading: true, // conditional redning variable to show basic loading status to user
+      // placeholder for the two data sets being stitched together
+      stitchData: null,
+      // data for county name and education level; label by "fips"
+      eduData: null,
+      // data for svg data to pass to TopoJSON and D3 to draw county and state lines; lables by "id"
+      mapData: null,
+      heightChart: '650', // height of d3 svg #choropleth element
+      widthChart: '1200', // width of d3 svg #choropleth element
+      mapViewBox: '0 0 975 610', // position of BOTH state and county maps within the svg
+      legendWidth: 250,
+      legendPostion: '600, 35',
+      // 7 count divergent color swatch for temp colors:
+      // Sequential color scheme started as YlGnBl from https://observablehq.com/@d3/color-schemes
+      // Colors converted to nearest material design palate using https://materialmixer.co/
+      colorBand: ['#fff9c4', '#c5e1a5', '#80cbc4', '#4db6ac', '#1976d2', '#1565c0', '#1a237e'],
     };
   },
 
@@ -23,11 +38,6 @@ export default {
       //  and data[1] representing the path data for the counties and state
       .then((responses) => Promise.all(responses.map((response) => response.json())))
       .then((data) => {
-        this.eduData = data[0];
-        this.mapData = data[1];
-      })
-      .then(() => {
-        // NOTE: This is slow?! At least the browser isn't complaining about a bad script anymore...
         // merge the two data sets by county: "fips" in education data and "id" in the counties
         //  data refer to the same code!
         const mergeByIdFips = (arr1, arr2) => arr1.map((firstObj) => ({
@@ -35,8 +45,12 @@ export default {
           //  each array of the objects
           ...arr2.find((secondObj) => (firstObj.fips === secondObj.id)), ...firstObj,
         }));
-        this.stitchData = mergeByIdFips(this.eduData,
-          this.mapData.objects.counties.geometries);
+
+        // PREVENTS MASSIVE SLOWDOWN by keeping fetch'd data from being reactive within Vue.
+        // See: https://reside-ic.github.io/blog/handling-long-arrays-performantly-in-vue.js/
+        this.eduData = Object.freeze(data[0]);
+        this.mapData = Object.freeze(data[1]);
+        this.stitchData = mergeByIdFips(this.eduData, this.mapData.objects.counties.geometries);
       })
       // This inserts the education data into county svg data so that we need only reference one
       // object instead of constantly searching between the two when renedering the map.
@@ -60,16 +74,6 @@ export default {
     graphInit() {
       // based on: https://observablehq.com/@d3/choropleth
 
-      const heightChart = '650'; // height of d3 svg #choropleth element
-      const widthChart = '1200'; // width of d3 svg #choropleth element
-      const mapViewBox = '0 0 975 610'; // position of BOTH state and county maps within the svg
-      const legendWidth = 250;
-      const legendPostion = '600, 35';
-      // 7 count divergent color swatch for temp colors:
-      // Sequential color scheme started as YlGnBl from https://observablehq.com/@d3/color-schemes
-      // Colors converted to nearest material design palate using https://materialmixer.co/
-      const colorBand = ['#fff9c4', '#c5e1a5', '#80cbc4', '#4db6ac', '#1976d2', '#1565c0', '#1a237e'];
-
       // remove loading message
       this.loading = false;
 
@@ -78,17 +82,17 @@ export default {
 
       const svg = d3.select('#choropleth')
         .append('svg')
-        .attr('viewBox', mapViewBox)
-        .attr('height', heightChart)
-        .attr('width', widthChart);
+        .attr('viewBox', this.mapViewBox)
+        .attr('height', this.heightChart)
+        .attr('width', this.widthChart);
 
       const colorScale = d3.scaleThreshold()
         .domain(this.stepScaleArr(
           lowestLevelEdu,
           highestLevelEdu,
-          colorBand.length,
+          this.colorBand.length,
         ))
-        .range(colorBand);
+        .range(this.colorBand);
 
       // svg group for the mapping of data; helps keep data graphics separate from axis
       const map = svg.append('g')
@@ -158,7 +162,7 @@ export default {
         ])
         .range([
           0,
-          legendWidth,
+          this.legendWidth,
         ]);
 
       const legendAxis = d3.axisBottom(legendScale)
@@ -168,7 +172,7 @@ export default {
         .tickSize(20);
 
       legend
-        .attr('transform', `translate(${legendPostion})`)
+        .attr('transform', `translate(${this.legendPostion})`)
         .call(legendAxis);
 
       legend.selectAll('rect')
@@ -189,7 +193,7 @@ export default {
         .attr('width', (d) => legendScale(d[1]) - legendScale(d[0]))
         .attr('height', 12)
         // deviating from example because this works
-        .attr('fill', (d, i) => colorBand[i]);
+        .attr('fill', (d, i) => this.colorBand[i]);
     },
 
     // Takes in the minimum and maximum of a range of numbers; count is the number of steps between
