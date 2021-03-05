@@ -7,17 +7,7 @@ export default {
 
   data() {
     return {
-      // url returns json data with education level attainment by county
-      urlEdu:
-      'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json',
-      // url returns json needed to draw counties needed by topojson and d3
-      urlCounty:
-      'https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json',
-      // placeholder for fetch'd education and count data stored in an array for each fetch'd json
-      //  education json and the "id" given by the county json
-      stitchData: undefined, // placeholder for merged education and county data
-      eduData: undefined, // placeholder for education attainment by county data
-      countyData: undefined, // TopoJSON data for drawing counties, states
+      loading: true, // conditional redning variable to show basic loading status to user
       heightChart: '650', // height of d3 svg #choropleth element
       widthChart: '1200', // width of d3 svg #choropleth element
       mapViewBox: '0 0 975 610', // position of BOTH state and county maps within the svg
@@ -31,10 +21,12 @@ export default {
   },
 
   created() {
-    // fetch both sets of data simultaneously and combine into one data
+    // fetch both sets of data asynchronously and combine into one data set
     Promise.all([
-      fetch(this.urlEdu),
-      fetch(this.urlCounty),
+      // url returns json data with education level attainment by county
+      fetch('https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json'),
+      // url returns json needed to draw counties needed by topojson and d3
+      fetch('https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json'),
     ])
       // the fetch'd data is combined into an array with data[0] representing the education data
       //  and data[1] representing the path data for the counties and state
@@ -76,6 +68,9 @@ export default {
   methods: {
     graphInit() {
       // based on: https://observablehq.com/@d3/choropleth
+
+      // remove loading message
+      this.loading = false;
 
       const lowestLevelEdu = d3.min(this.eduData, (d) => d.bachelorsOrHigher);
       const highestLevelEdu = d3.max(this.eduData, (d) => d.bachelorsOrHigher);
@@ -231,7 +226,7 @@ export default {
         drawing the map is quick -->
       <p
         class="loading-message"
-        v-if="!this.stitchData">
+        v-if="this.loading">
       Loading...
       </p>
     </div>
