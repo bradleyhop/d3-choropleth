@@ -16,9 +16,10 @@ export default {
       mapData: null,
       heightChart: '650', // height of d3 svg #choropleth element
       widthChart: '1200', // width of d3 svg #choropleth element
-      mapViewBox: '0 0 975 610', // position of BOTH state and county maps within the svg
+      mapViewBox: '0 0 1300 620', // position of BOTH state and county maps within the svg
+      mapPosition: '150, 0', // offset for map position
       legendWidth: 250,
-      legendPostion: '600, 35',
+      legendPostion: '750, 35',
       // 7 count divergent color swatch for temp colors:
       // Sequential color scheme started as YlGnBl from https://observablehq.com/@d3/color-schemes
       // Colors converted to nearest material design palate using https://materialmixer.co/
@@ -82,9 +83,7 @@ export default {
 
       const svg = d3.select('#choropleth')
         .append('svg')
-        .attr('viewBox', this.mapViewBox)
-        .attr('height', this.heightChart)
-        .attr('width', this.widthChart);
+        .attr('viewBox', this.mapViewBox);
 
       const colorScale = d3.scaleThreshold()
         .domain(this.stepScaleArr(
@@ -97,7 +96,8 @@ export default {
       // svg group for the mapping of data; helps keep data graphics separate from axis
       const map = svg.append('g')
         .attr('id', 'map')
-        .attr('class', 'map');
+        .attr('class', 'map')
+        .attr('transform', `translate(${this.mapPosition})`);
 
       // function declaration for tooltip div element
       const divTool = d3.select('#tooltip-container')
@@ -142,7 +142,7 @@ export default {
         });
 
       // STATE svg data; drawn on top of county data
-      svg.append('path')
+      map.append('path')
         .datum(topojson.mesh(this.mapData, this.mapData.objects.states,
           (a, b) => a !== b))
         .attr('d', d3.geoPath())
@@ -169,7 +169,7 @@ export default {
         // add lowestLevelEdu to label range b/c not in domain
         .tickValues([lowestLevelEdu].concat(colorScale.domain()))
         .tickFormat((d) => `${d3.format('d')(d)}%`) // format to decimal, rounded to int
-        .tickSize(20);
+        .tickSize(15);
 
       legend
         .attr('transform', `translate(${this.legendPostion})`)
@@ -191,7 +191,7 @@ export default {
         .attr('class', 'legend-cell')
         .attr('x', (d) => legendScale(d[0]))
         .attr('width', (d) => legendScale(d[1]) - legendScale(d[0]))
-        .attr('height', 12)
+        .attr('height', 10)
         // deviating from example because this works
         .attr('fill', (d, i) => this.colorBand[i]);
     },
@@ -215,13 +215,13 @@ export default {
 
 <template>
   <div class="conainter-choropleth">
-    <h2
-      class="chart-title"
+    <p
+      class="description"
       id="description"
       >
       Percentage of Adults Age 25 and Older With a Bachelor's Degree or Higher
       (2010-2014)<sup>*</sup>
-    </h2>
+    </p>
     <!-- tooltip info displays on mouseover here; id is project requirement -->
     <div
       id="tooltip-container"
@@ -245,9 +245,10 @@ export default {
 </template>
 
 <style lang="scss">
-.chart-title {
+.description {
   color: $text-default;
   font-family: Roboto, Helvetica, Arial, sans-serif;
+  font-size: 1.25rem;
   margin-bottom: 0;
 }
 
