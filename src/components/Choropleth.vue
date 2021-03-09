@@ -14,12 +14,10 @@ export default {
       eduData: null,
       // data for svg data to pass to TopoJSON and D3 to draw county and state lines; lables by "id"
       mapData: null,
-      heightChart: '650', // height of d3 svg #choropleth element
-      widthChart: '1200', // width of d3 svg #choropleth element
-      mapViewBox: '0 0 1300 620', // position of BOTH state and county maps within the svg
-      mapPosition: '150, 0', // offset for map position
+      mapViewBox: '0, 0, 1200, 610', // position of BOTH state and county maps within the svg
+      mapPosition: '120, 0', // offset for map position
       legendWidth: 250,
-      legendPostion: '750, 35',
+      legendPostion: '720, 40',
       // 7 count divergent color swatch for temp colors:
       // Sequential color scheme started as YlGnBl from https://observablehq.com/@d3/color-schemes
       // Colors converted to nearest material design palate using https://materialmixer.co/
@@ -250,6 +248,18 @@ export default {
   font-family: Roboto, Helvetica, Arial, sans-serif;
   font-size: 1.25rem;
   margin-bottom: 0;
+}
+
+// set container width so that map scales with the viewport; in conjunction with svg attribute
+//  viewBox
+.choropleth {
+  margin: auto;
+  width: 65%;
+
+  // scale for tablets and phones
+  @media only screen and  (max-width: 800px) {
+    width: 100%;
+  }
 }
 
 .county:hover {
