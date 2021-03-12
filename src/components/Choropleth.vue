@@ -166,7 +166,7 @@ export default {
       const legendAxis = d3.axisBottom(legendScale)
         // add lowestLevelEdu to label range b/c not in domain
         .tickValues([lowestLevelEdu].concat(colorScale.domain()))
-        .tickFormat((d) => `${d3.format('d')(d)}%`) // format to decimal, rounded to int
+        .tickFormat((d) => d3.format('d')(d)) // format to decimal, rounded to int
         .tickSize(15);
 
       legend
@@ -269,6 +269,11 @@ export default {
 
 .state {
   stroke: $app-background;
+}
+
+// legend tick
+.tick text {
+  font-size: 0.9rem;
 }
 
 .tooltip-container {
